@@ -1,4 +1,4 @@
-# Polish — Free AI Paper Reviewer for Students
+# Polish — AI Paper Reviewer for Students
 
 Get reviewer-grade feedback on your academic paper in under two minutes. Eight parallel AI agents examine logic, math, references, arguments, citations, clarity, methods, and writing style.
 
