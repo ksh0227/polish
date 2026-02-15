@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Polish — Free AI Paper Reviewer for Students</title>
+<meta name="description" content="Get detailed, reviewer-grade feedback on your academic paper in minutes. Free, open-source, bring your own API key." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.5/babel.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --border: #e2e0db;
+  --border-light: #f0eeeb;
+  --text: #1a1a1a;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-light: #eef2ff;
+  --red: #dc2626;
+  --orange: #ea580c;
+  --green: #16a34a;
+  --font: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+}
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Header */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.header-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+}
+.logo {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.logo-mark {
+  width: 24px; height: 24px;
+  background: var(--accent);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 13px; font-weight: 700;
+}
+.header-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.02em;
+}
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn-ghost {
+  background: none; border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 14px; font-size: 13px;
+  cursor: pointer; color: var(--text-secondary); font-family: var(--font);
+  font-weight: 500; transition: all 0.12s;
+}
+.btn-ghost:hover { border-color: var(--text-secondary); color: var(--text); }
+
+/* Main */
+.main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+
+/* Card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.card + .card { margin-top: 20px; }
+
+/* API Key Setup */
+.setup-card {
+  padding: 32px;
+  text-align: center;
+}
+.setup-card h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+.setup-card p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.key-input-row {
+  display: flex;
+  gap: 10px;
+  max-width: 480px;
+  margin: 0 auto 12px;
+}
+.key-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.key-input:focus { border-color: var(--accent); }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.4; cursor: default; }
+.setup-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 480px;
+  margin: 0 auto;
+}
+.key-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+
+/* Drop zone */
+.drop-zone {
+  margin: 20px 20px 0;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 36px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.drop-zone.disabled { cursor: default; opacity: 0.6; }
+.drop-icon { font-size: 28px; color: var(--text-muted); margin-bottom: 4px; }
+.drop-label { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+.drop-hint { font-size: 12px; color: var(--text-muted); }
+.file-info {
+  display: flex; align-items: center; gap: 10px;
+}
+.file-name {
+  font-family: var(--mono); font-size: 14px; font-weight: 600;
+}
+.clear-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 16px; padding: 2px 6px;
+}
+.file-error {
+  margin: 8px 20px 0;
+  padding: 8px 12px;
+  background: #fef2f2;
+  color: var(--red);
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+/* Divider */
+.divider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 0;
+}
+.divider-line { flex: 1; height: 1px; background: var(--border-light); }
+.divider-text {
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500;
+}
+
+/* Textarea */
+.paper-textarea {
+  width: 100%;
+  min-height: 180px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  padding: 14px 20px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+  background: transparent;
+}
+.paper-textarea::placeholder { color: var(--text-muted); }
+
+/* Input footer */
+.input-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg);
+}
+.char-count {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Progress */
+.progress-card { padding: 20px; }
+.progress-title {
+  font-size: 14px; font-weight: 600;
+  margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.agent-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: 6px;
+  border-left: 3px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+.agent-chip.pending { opacity: 0.45; }
+.agent-chip .status {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Results */
+.results-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+.results-title {
+  font-size: 18px; font-weight: 700;
+  margin-bottom: 10px; letter-spacing: -0.02em;
+}
+.summary-row {
+  display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+}
+.summary-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; color: var(--text-secondary);
+}
+.summary-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+.summary-total {
+  font-family: var(--mono); font-size: 13px;
+  color: var(--text-muted); margin-left: auto;
+}
+
+/* Filters */
+.filter-row {
+  display: flex; gap: 6px; padding: 12px 20px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+.filter-btn {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all 0.12s;
+}
+.filter-btn:hover { border-color: var(--text-muted); }
+.filter-btn.active {
+  color: #fff;
+  border-color: transparent;
+}
+
+/* Finding card */
+.findings-list { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.finding-card {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 16px 18px;
+  border-left: 3px solid transparent;
+}
+.finding-meta {
+  display: flex; gap: 8px; align-items: center;
+  flex-wrap: wrap; margin-bottom: 10px;
+}
+.badge {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: 4px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  color: #fff;
+}
+.badge-location {
+  font-size: 11px; color: var(--text-muted);
+  font-family: var(--mono); background: #f3f4f6;
+  padding: 2px 6px; border-radius: 4px; color: var(--text-secondary);
+}
+.finding-quote {
+  border-left: 2px solid #d1d5db;
+  padding-left: 14px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.6;
+}
+.finding-issue {
+  font-size: 14px; line-height: 1.6; margin: 8px 0;
+}
+.finding-suggestion {
+  font-size: 13px; line-height: 1.6;
+  background: #f0fdf4; color: var(--text);
+  padding: 10px 14px; border-radius: 6px; margin-top: 8px;
+}
+.finding-suggestion strong { font-weight: 600; }
+.no-findings {
+  padding: 40px 20px; text-align: center;
+  color: var(--text-muted); font-size: 14px;
+}
+
+/* Cost estimate */
+.cost-bar {
+  padding: 10px 20px;
+  background: #fffbeb;
+  border-top: 1px solid #fde68a;
+  font-size: 12px;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Footer */
+.footer {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+  text-align: center;
+}
+.footer-text {
+  font-size: 12px; color: var(--text-muted);
+}
+.footer-links {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.footer-links a { margin: 0 8px; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .key-input-row { flex-direction: column; }
+  .header-tag { display: none; }
+  .agent-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useCallback, useRef, useEffect } = React;
+
+// ─── Config ──────────────────────────────────────────────────
+const MODELS = [
+  { id: "claude-haiku-4-5-20251001",  label: "Haiku 4.5",  inputPer1M: 1,  outputPer1M: 5,  tag: "Fastest · cheapest" },
+  { id: "claude-sonnet-4-5-20250929", label: "Sonnet 4.5", inputPer1M: 3,  outputPer1M: 15, tag: "Recommended" },
+  { id: "claude-sonnet-4-20250514",   label: "Sonnet 4",   inputPer1M: 3,  outputPer1M: 15, tag: "Balanced" },
+  { id: "claude-opus-4-5-20251101",   label: "Opus 4.5",   inputPer1M: 5,  outputPer1M: 25, tag: "Most capable" },
+];
+const DEFAULT_MODEL = MODELS[1]; // Sonnet 4.5
+const MAX_TOKENS = 4096;
+const AVG_OUTPUT_PER_AGENT = 1200; // estimated output tokens per agent
+
+// pdf.js loaded via script tag in <head>
+function getPdfLib() {
+  if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    return window.pdfjsLib;
+  }
+  return null;
+}
+
+async function extractPdfText(arrayBuffer) {
+  const lib = getPdfLib();
+  if (!lib) throw new Error("PDF library not available. Try a .tex or .txt file instead.");
+  const doc = await lib.getDocument({ data: arrayBuffer }).promise;
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    pages.push(content.items.map(item => item.str).join(" "));
+  }
+  return pages.join("\n\n");
+}
+
+async function readFile(file) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  if (ext === "pdf") {
+    const buf = await file.arrayBuffer();
+    return extractPdfText(buf);
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsText(file);
+  });
+}
+
+// ─── Agents ──────────────────────────────────────────────────
+const AGENTS = [
+  {
+    id: "logical_consistency", label: "Logical Consistency", icon: "⚡", color: "#dc2626",
+    systemPrompt: `You are a rigorous logical consistency reviewer for academic manuscripts. Identify: contradictions across sections, arguments where conclusions don't follow from premises, unstated critical assumptions, inconsistent use of qualifiers.
+
+Return JSON array: [{"quote":"...","issue":"...","suggestion":"...","severity":"high|medium|low","location":"..."}]
+No issues → []. ONLY valid JSON, no markdown fences.`
+  },
+  {
+    id: "math_reasoning", label: "Math & Formal Reasoning", icon: "∑", color: "#2563eb",
+    systemPrompt: `You are a mathematical reasoning reviewer. Check: proofs for missing cases and gaps, equations following from premises, notation consistency, boundary/edge cases, off-by-one errors.
+
+Return JSON array: [{"quote":"...","issue":"...","suggestion":"...","severity":"high|medium|low","location":"..."}]
+No math content or no issues → []. ONLY valid JSON, no markdown fences.`
+  },
+  {
+    id: "internal_references", label: "Internal References", icon: "🔗", color: "#16a34a",
+    systemPrompt: `You are an internal reference checker. Verify: table/figure/equation references match content, numbered items referenced correctly, no dangling references, forward/backward reference consistency.
+
+Return JSON array: [{"quote":"...","issue":"...","suggestion":"...","severity":"high|medium|low","location":"..."}]
+No issues → []. ONLY valid JSON, no markdown fences.`
+  },
+  {
+    id: "argument_completeness", label: "Argument Completeness", icon: "🏗", color: "#9333ea",
+    systemPrompt: `You are an argument completeness reviewer. Find: claims lacking evidence, assertions needing citation, gaps in causal chains, unaddressed alternative explanations, conclusions exceeding evidence.
+
+Return JSON array: [{"quote":"...","issue":"...","suggestion":"...","severity":"high|medium|low","location":"..."}]
+No issues → []. ONLY valid JSON, no markdown fences.`
+  },
+  {
+    id: "clarity_precision", label: "Clarity & Precision", icon: "✏️", color: "#ea580c",
+    systemPrompt: `You are a clarity reviewer. Focus on SUBSTANTIVE issues only: genuinely ambiguous sentences, undefined technical terms, ambiguous pronoun references, structure obscuring meaning. Ignore style preferences.
+
+Return JSON array: [{"quote":"...","issue":"...","suggestion":"...","severity":"high|medium|low","location":"..."}]
+No issues → []. ONLY valid JSON, no markdown fences.`
+  },
+  {
+    id: "empirical_methods", label: "Empirical Methods", icon: "📊", color: "#0d9488",
+    systemPrompt: `You are an empirical methods reviewer. Check: statistical methods appropriate for data, identification strategy consistency, unaddressed confounds, internal consistency of reported results, over-interpretation of findings.
+
+Return JSON array: [{"quote":"...","issue":"...","suggestion":"...","severity":"high|medium|low","location":"..."}]
+No empirical content or no issues → []. ONLY valid JSON, no markdown fences.`
+  },
+  {
+    id: "citations_bibliography", label: "Citations & Bibliography", icon: "📚", color: "#b45309",
+    systemPrompt: `You are a citation and bibliography reviewer for academic manuscripts. Your task:
+1. Identify claims that appear to require a citation but have none (empirical facts, prior results, contested claims).
+2. Flag in-text citations that don't appear in the bibliography/references section.
+3. Flag bibliography entries that are never cited in the text.
+4. Check for inconsistencies in citation format (mixing styles, incomplete entries).
+5. Identify self-citations or citation clusters that suggest bias.
+6. Note places where more recent or seminal references would strengthen the argument.
+
+Return JSON array: [{"quote":"...","issue":"...","suggestion":"...","severity":"high|medium|low","location":"..."}]
+No issues → []. ONLY valid JSON, no markdown fences.`
+  },
+  {
+    id: "writing_style", label: "Writing & Style", icon: "🖊️", color: "#6d28d9",
+    systemPrompt: `You are a writing style reviewer for student academic papers. Your task:
+1. Identify passages with unnecessarily convoluted sentence structure that hinders readability.
+2. Flag overuse of passive voice where active voice would be clearer and stronger.
+3. Detect hedging language that weakens claims unnecessarily ("it seems that perhaps...").
+4. Find redundant phrases and wordiness ("in order to" → "to", "due to the fact that" → "because").
+5. Identify tonal inconsistencies (switching between formal and informal register).
+6. Flag paragraphs that lack a clear topic sentence or logical flow.
+7. Note where transitions between sections are abrupt or missing.
+
+Focus on issues that would matter to a journal reviewer or thesis committee. Do NOT flag issues already covered by a clarity/precision agent (ambiguous references, undefined terms). Focus on STYLE.
+
+Return JSON array: [{"quote":"...","issue":"...","suggestion":"...","severity":"high|medium|low","location":"..."}]
+No issues → []. ONLY valid JSON, no markdown fences.`
+  }
+];
+
+// ─── API ─────────────────────────────────────────────────────
+async function callClaude(apiKey, model, systemPrompt, userContent) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: model,
+      max_tokens: MAX_TOKENS,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userContent }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+  const data = await res.json();
+  const text = data.content?.map(b => b.type === "text" ? b.text : "").join("") || "";
+  const clean = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  try { return JSON.parse(clean); } catch { return []; }
+}
+
+const SEV_ORDER = { high: 0, medium: 1, low: 2 };
+
+// ─── Components ──────────────────────────────────────────────
+
+function ApiKeySetup({ onSave }) {
+  const [key, setKey] = useState("");
+  const [saved, setSaved] = useState(() => !!localStorage.getItem("polish_api_key"));
+
+  useEffect(() => {
+    const stored = localStorage.getItem("polish_api_key");
+    if (stored) { setKey(stored); onSave(stored); }
+  }, []);
+
+  const save = () => {
+    if (!key.startsWith("sk-ant-")) return;
+    localStorage.setItem("polish_api_key", key);
+    setSaved(true);
+    onSave(key);
+  };
+
+  const clear = () => {
+    localStorage.removeItem("polish_api_key");
+    setKey(""); setSaved(false); onSave("");
+  };
+
+  if (saved) {
+    return (
+      <div className="card setup-card">
+        <div className="key-saved">✓ API key saved</div>
+        <p>Your key is stored locally in this browser. It is sent only to the Anthropic API.</p>
+        <button className="btn-ghost" onClick={clear}>Remove key</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card setup-card">
+      <h2>Enter your Anthropic API key</h2>
+      <p>
+        Your key stays in your browser's local storage and is sent only to Anthropic's API.
+        Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.
+      </p>
+      <div className="key-input-row">
+        <input
+          className="key-input"
+          type="password"
+          placeholder="sk-ant-..."
+          value={key}
+          onChange={e => setKey(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && save()}
+        />
+        <button className="btn-primary" onClick={save} disabled={!key.startsWith("sk-ant-")}>
+          Save key
+        </button>
+      </div>
+      <p className="setup-hint">
+        Each analysis runs 8 parallel API calls. Cost depends on model and paper length: ~$0.06 (Haiku, short paper) to ~$1.37 (Opus, long paper).
+      </p>
+    </div>
+  );
+}
+
+function PaperInput({ onSubmit, loading, model }) {
+  const [text, setText] = useState("");
+  const [fileName, setFileName] = useState(null);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef(null);
+
+  const estCost = estimateCost(text.length, model);
+
+  const handleFile = useCallback(async (file) => {
+    if (!file) return;
+    setFileError(null); setFileLoading(true); setFileName(file.name);
+    try {
+      const content = await readFile(file);
+      if (!content || content.trim().length < 50)
+        throw new Error("Extracted text is too short. The file may be image-only or empty.");
+      setText(content);
+    } catch (err) {
+      setFileError(err.message); setFileName(null);
+    } finally { setFileLoading(false); }
+  }, []);
+
+  const onDrop = useCallback(e => {
+    e.preventDefault(); setDragOver(false);
+    handleFile(e.dataTransfer.files?.[0]);
+  }, [handleFile]);
+
+  return (
+    <div className="card">
+      <div
+        className={`drop-zone ${dragOver ? "drag-over" : ""} ${loading || fileLoading ? "disabled" : ""}`}
+        onDrop={onDrop}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onClick={() => !loading && !fileLoading && fileRef.current?.click()}
+      >
+        <input
+          ref={fileRef} type="file" style={{ display: "none" }}
+          accept=".pdf,.tex,.latex,.txt,.md,.markdown,.bib,.rst"
+          onChange={e => { handleFile(e.target.files?.[0]); e.target.value = ""; }}
+          disabled={loading || fileLoading}
+        />
+        {fileLoading ? (
+          <span className="drop-label">Extracting text…</span>
+        ) : fileName ? (
+          <div className="file-info">
+            <span style={{ fontSize: 22 }}>📄</span>
+            <span className="file-name">{fileName}</span>
+            <button className="clear-btn" onClick={e => {
+              e.stopPropagation(); setFileName(null); setText(""); setFileError(null);
+            }}>✕</button>
+          </div>
+        ) : (
+          <>
+            <span className="drop-icon">↑</span>
+            <span className="drop-label">Drop a file here or click to upload</span>
+            <span className="drop-hint">PDF, LaTeX (.tex), Markdown, or plain text</span>
+          </>
+        )}
+      </div>
+      {fileError && <div className="file-error">{fileError}</div>}
+      <div className="divider-row">
+        <div className="divider-line" />
+        <span className="divider-text">or paste below</span>
+        <div className="divider-line" />
+      </div>
+      <textarea
+        className="paper-textarea"
+        value={text}
+        onChange={e => { setText(e.target.value); if (fileName) setFileName(null); }}
+        placeholder="Paste your manuscript here…"
+        disabled={loading || fileLoading}
+      />
+      <div className="input-footer">
+        <span className="char-count">
+          {text.length.toLocaleString()} chars
+          {text.length > 100 && estCost !== null && (
+            <span style={{ marginLeft: 10, color: "#92400e" }}>
+              ≈ ${estCost.toFixed(2)} with {model.label}
+            </span>
+          )}
+        </span>
+        <button
+          className="btn-primary"
+          onClick={() => text.trim().length > 100 && onSubmit(text.trim())}
+          disabled={loading || fileLoading || text.trim().length < 100}
+        >
+          {loading ? "Analyzing…" : "Analyze Paper"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProgressPanel({ agentStatus }) {
+  const allDone = Object.values(agentStatus).every(s => s === "done");
+  return (
+    <div className="card progress-card">
+      <div className="progress-title">
+        {!allDone && <span className="spinner" />}
+        {allDone ? "Analysis complete" : "Running 8 parallel agents…"}
+      </div>
+      <div className="agent-grid">
+        {AGENTS.map(agent => {
+          const s = agentStatus[agent.id] || "pending";
+          return (
+            <div key={agent.id}
+              className={`agent-chip ${s}`}
+              style={{ borderLeftColor: agent.color }}
+            >
+              <span>{agent.icon}</span>
+              <span>{agent.label}</span>
+              <span className="status" style={{
+                color: s === "done" ? "#16a34a" : s === "running" ? "#ea580c" : "#9ca3af"
+              }}>
+                {s === "done" ? "✓" : s === "running" ? "⟳" : "○"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FindingCard({ finding, agent }) {
+  const sevColors = { high: "#dc2626", medium: "#ea580c", low: "#9ca3af" };
+  return (
+    <div className="finding-card" style={{ borderLeftColor: agent.color }}>
+      <div className="finding-meta">
+        <span className="badge" style={{ background: agent.color }}>{agent.icon} {agent.label}</span>
+        <span className="badge" style={{ background: sevColors[finding.severity] || "#9ca3af" }}>{finding.severity}</span>
+        {finding.location && <span className="badge-location">{finding.location}</span>}
+      </div>
+      {finding.quote && <blockquote className="finding-quote">"{finding.quote}"</blockquote>}
+      <p className="finding-issue">{finding.issue}</p>
+      {finding.suggestion && (
+        <div className="finding-suggestion"><strong>Suggestion:</strong> {finding.suggestion}</div>
+      )}
+    </div>
+  );
+}
+
+function ResultsPanel({ results, inputLength, model }) {
+  const [filter, setFilter] = useState("all");
+
+  const allFindings = [];
+  for (const agentId in results) {
+    const agent = AGENTS.find(a => a.id === agentId);
+    if (!agent) continue;
+    for (const f of results[agentId]) allFindings.push({ ...f, agent });
+  }
+  allFindings.sort((a, b) => (SEV_ORDER[a.severity] ?? 3) - (SEV_ORDER[b.severity] ?? 3));
+
+  const filtered = filter === "all" ? allFindings : allFindings.filter(f => f.agent.id === filter);
+  const counts = {};
+  for (const f of allFindings) counts[f.agent.id] = (counts[f.agent.id] || 0) + 1;
+  const highN = allFindings.filter(f => f.severity === "high").length;
+  const medN = allFindings.filter(f => f.severity === "medium").length;
+  const lowN = allFindings.filter(f => f.severity === "low").length;
+
+  const estCost = estimateCost(inputLength, model);
+
+  return (
+    <div className="card">
+      <div className="results-header">
+        <h2 className="results-title">Feedback Panel</h2>
+        <div className="summary-row">
+          <span className="summary-item"><span className="summary-dot" style={{ background: "#dc2626" }} /> {highN} high</span>
+          <span className="summary-item"><span className="summary-dot" style={{ background: "#ea580c" }} /> {medN} medium</span>
+          <span className="summary-item"><span className="summary-dot" style={{ background: "#9ca3af" }} /> {lowN} low</span>
+          <span className="summary-total">{allFindings.length} findings</span>
+        </div>
+      </div>
+      <div className="filter-row">
+        <button className={`filter-btn ${filter === "all" ? "active" : ""}`}
+          style={filter === "all" ? { background: "#1a1a1a", color: "#fff" } : {}}
+          onClick={() => setFilter("all")}>All ({allFindings.length})</button>
+        {AGENTS.map(a => (
+          <button key={a.id}
+            className={`filter-btn ${filter === a.id ? "active" : ""}`}
+            style={filter === a.id ? { background: a.color, color: "#fff" } : {}}
+            onClick={() => setFilter(a.id)}>{a.icon} {counts[a.id] || 0}</button>
+        ))}
+      </div>
+      {filtered.length === 0
+        ? <p className="no-findings">No findings in this category.</p>
+        : <div className="findings-list">{filtered.map((f, i) => <FindingCard key={i} finding={f} agent={f.agent} />)}</div>
+      }
+      <div className="cost-bar">
+        💡 Estimated cost: ~${estCost !== null ? estCost.toFixed(2) : "?"} ({model.label} · ${model.inputPer1M}/${model.outputPer1M} per MTok)
+      </div>
+    </div>
+  );
+}
+
+function estimateCost(charCount, model) {
+  if (!charCount || !model) return null;
+  const inputTokensPerAgent = Math.ceil(charCount / 4) + 300; // paper + system prompt
+  const totalInput = inputTokensPerAgent * AGENTS.length;
+  const totalOutput = AVG_OUTPUT_PER_AGENT * AGENTS.length;
+  const cost = (totalInput / 1e6) * model.inputPer1M + (totalOutput / 1e6) * model.outputPer1M;
+  return cost;
+}
+
+function ModelSelector({ model, onChange }) {
+  return (
+    <div className="card" style={{ padding: "16px 20px" }}>
+      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>Model</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {MODELS.map(m => (
+          <button
+            key={m.id}
+            onClick={() => onChange(m)}
+            className="filter-btn"
+            style={{
+              background: model.id === m.id ? "var(--accent)" : "transparent",
+              color: model.id === m.id ? "#fff" : "var(--text-secondary)",
+              borderColor: model.id === m.id ? "var(--accent)" : "var(--border)",
+              padding: "8px 14px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: 2,
+            }}
+          >
+            <span style={{ fontWeight: 600, fontSize: 13 }}>{m.label}</span>
+            <span style={{
+              fontSize: 11,
+              opacity: 0.8,
+              fontWeight: 400,
+            }}>{m.tag} · ${m.inputPer1M}/${m.outputPer1M} per MTok</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── App ─────────────────────────────────────────────────────
+function App() {
+  const [apiKey, setApiKey] = useState("");
+  const [model, setModel] = useState(DEFAULT_MODEL);
+  const [stage, setStage] = useState("input");
+  const [agentStatus, setAgentStatus] = useState({});
+  const [results, setResults] = useState({});
+  const [inputLength, setInputLength] = useState(0);
+  const [apiError, setApiError] = useState(null);
+
+  const analyze = useCallback(async (paperText) => {
+    if (!apiKey) return;
+    setApiError(null);
+    setStage("analyzing");
+    setInputLength(paperText.length);
+    setAgentStatus(AGENTS.reduce((a, ag) => ({ ...a, [ag.id]: "pending" }), {}));
+    setResults({});
+
+    const truncated = paperText.length > 30000
+      ? paperText.slice(0, 30000) + "\n\n[...truncated at 30,000 characters]"
+      : paperText;
+
+    const userPrompt = `Carefully analyze the following academic manuscript and identify issues within your area of expertise. Be thorough but focus on substantive issues that would matter to a reviewer or thesis committee.\n\n---\n\n${truncated}`;
+
+    let errorOccurred = false;
+
+    const promises = AGENTS.map(async agent => {
+      setAgentStatus(prev => ({ ...prev, [agent.id]: "running" }));
+      try {
+        const findings = await callClaude(apiKey, model.id, agent.systemPrompt, userPrompt);
+        setResults(prev => ({ ...prev, [agent.id]: Array.isArray(findings) ? findings : [] }));
+      } catch (err) {
+        console.error(`Agent ${agent.id}:`, err);
+        if (!errorOccurred) {
+          errorOccurred = true;
+          setApiError(err.message);
+        }
+        setResults(prev => ({ ...prev, [agent.id]: [] }));
+      } finally {
+        setAgentStatus(prev => ({ ...prev, [agent.id]: "done" }));
+      }
+    });
+
+    await Promise.all(promises);
+    setStage("results");
+  }, [apiKey, model]);
+
+  const reset = () => {
+    setStage("input"); setAgentStatus({}); setResults({}); setApiError(null);
+  };
+
+  return (
+    <>
+      <header className="header">
+        <div className="header-inner">
+          <div className="logo">
+            <div className="logo-mark">◆</div>
+            Polish
+          </div>
+          <span className="header-tag">Free &amp; open source</span>
+          <div className="header-right">
+            {stage !== "input" && (
+              <button className="btn-ghost" onClick={reset}>← New analysis</button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="main">
+        <ApiKeySetup onSave={setApiKey} />
+
+        {apiKey && (
+          <div style={{ marginTop: 20 }}>
+            <ModelSelector model={model} onChange={setModel} />
+          </div>
+        )}
+
+        {apiKey && stage === "input" && (
+          <div style={{ marginTop: 20 }}>
+            <PaperInput onSubmit={analyze} loading={false} model={model} />
+          </div>
+        )}
+
+        {apiKey && stage === "analyzing" && (
+          <>
+            <div style={{ marginTop: 20 }}>
+              <PaperInput onSubmit={() => {}} loading={true} model={model} />
+            </div>
+            <div style={{ marginTop: 20 }}>
+              <ProgressPanel agentStatus={agentStatus} />
+            </div>
+            {apiError && (
+              <div className="file-error" style={{ marginTop: 12 }}>
+                API error: {apiError}
+              </div>
+            )}
+            {Object.keys(results).length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <ResultsPanel results={results} inputLength={inputLength} model={model} />
+              </div>
+            )}
+          </>
+        )}
+
+        {apiKey && stage === "results" && (
+          <>
+            {apiError && (
+              <div className="file-error" style={{ marginTop: 0, marginBottom: 12 }}>
+                Some agents encountered errors: {apiError}
+              </div>
+            )}
+            <ResultsPanel results={results} inputLength={inputLength} model={model} />
+          </>
+        )}
+      </main>
+
+      <footer className="footer">
+        <p className="footer-text">
+          Polish runs 8 parallel AI agents. Costs range from ~$0.06 (Haiku) to ~$1.37 (Opus) per paper.
+          Your API key and manuscripts never leave your browser except to call Anthropic's API.
+        </p>
+        <div className="footer-links">
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get API key</a>
+          <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank" rel="noopener">Pricing</a>
+        </div>
+      </footer>
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
